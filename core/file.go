@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"image"
 	"io"
+	"math"
 	"os"
 	"strings"
 
@@ -37,8 +38,7 @@ const (
 	GIF  OutputFormat = "gif"
 )
 
-//
-//Deal with image files
+// Deal with image files
 func DealWithFile(source string, option OutputOptions) error {
 	file, err := os.Open(source)
 	if err != nil {
@@ -88,7 +88,24 @@ func DealWithFile(source string, option OutputOptions) error {
 		option.Height = height
 	}
 
-	afterResize := resize.Resize(uint(option.Width), uint(option.Height), data, option.Interpolation)
+	rWidth := option.Width
+	rHeight := option.Height
+	if rWidth < -4 {
+		size := float64(width) * float64(height)
+		if size <= float64(rWidth) {
+			rWidth = width
+			rHeight = height
+
+		} else {
+			scale := math.Sqrt(float64(-rWidth) / size)
+			rWidth = int(float64(width) * scale)
+			rHeight = int(float64(height) * scale)
+		}
+	}
+
+	println("%d, %d", rWidth, rHeight)
+
+	afterResize := resize.Resize(uint(rWidth), uint(rHeight), data, option.Interpolation)
 
 	if strings.EqualFold("", string(option.Format)) {
 		option.Format = OutputFormat(fileFormat)
@@ -115,8 +132,7 @@ func DealWithFile(source string, option OutputOptions) error {
 	return err
 } //end of function
 
-//
-//Guess image type
+// Guess image type
 func retrieveImageInfo(r io.Reader) (string, int, int, error) {
 	config, format, err := image.DecodeConfig(r)
 	if err != nil {
